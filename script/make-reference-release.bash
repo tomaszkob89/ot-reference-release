@@ -31,12 +31,13 @@ set -euxo pipefail
 
 mkdir -p build
 
+echo "REFERENCE_PLATFORM=${REFERENCE_PLATFORM?}"
 echo "REFERENCE_RELEASE_TYPE=${REFERENCE_RELEASE_TYPE?}"
 
 OUTPUT_ROOT=$(realpath build/ot-"${REFERENCE_RELEASE_TYPE?}-$(date +%Y%m%d)-$(cd openthread && git rev-parse --short HEAD)")
 
 mkdir -p "$OUTPUT_ROOT"/fw_dongle/
-OUTPUT_ROOT="$OUTPUT_ROOT"/fw_dongle/ ./script/make-firmware.bash
+OUTPUT_ROOT="$OUTPUT_ROOT"/fw_dongle/ ./script/make-firmware.bash ${REFERENCE_PLATFORM?}
 
 if [ "${REFERENCE_RELEASE_TYPE?}" = "certification" ]; then
   mkdir -p "$OUTPUT_ROOT"/thci
@@ -46,5 +47,13 @@ fi
 mkdir -p "$OUTPUT_ROOT"
 OUTPUT_ROOT="$OUTPUT_ROOT" ./script/make-raspbian.bash
 
-cp -r doc/* "$OUTPUT_ROOT"
+case "${REFERENCE_PLATFORM}" in
+  nrf*)
+    cp -r doc/OpenThread* "$OUTPUT_ROOT"
+    ;;
+  ncs*)
+    cp -r doc/nRF5* "$OUTPUT_ROOT"
+    ;;
+esac
+
 cp CHANGELOG.txt "$OUTPUT_ROOT"
