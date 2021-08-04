@@ -29,9 +29,21 @@
 
 set -euxo pipefail
 
-echo "OUTPUT_ROOT=${OUTPUT_ROOT?}"
+if [[ -n ${BASH_SOURCE[0]} ]]; then
+    script_path="${BASH_SOURCE[0]}"
+else
+    script_path="$0"
+fi
 
-readonly PLATFORM=nrf52840
+script_dir="$(dirname "$(realpath "$script_path")")"
+repo_dir="$(dirname "$script_dir")"
+
+# Global Vars
+platform=""
+build_type=""
+build_dir=""
+
+readonly OT_PLATFORMS=(nrf52840 ncs)
 
 readonly BUILD_1_2_OPTIONS=('-DOT_BOOTLOADER=USB'
   '-DOT_REFERENCE_DEVICE=ON'
@@ -69,58 +81,216 @@ readonly BUILD_1_1_ENV=(
   'USB=1'
 )
 
-NRFUTIL=/tmp/nrfutil-linux
-if [ ! -f $NRFUTIL ]; then
-  wget -O $NRFUTIL https://github.com/NordicSemiconductor/pc-nrfutil/releases/download/v6.1/nrfutil-linux
-  chmod +x $NRFUTIL
-fi
+die() { echo "$*" 1>&2 ; exit 1; }
 
-if [ ! -f /tmp/private.pem ]; then
-  $NRFUTIL keys generate /tmp/private.pem
-fi
-mkdir -p "$OUTPUT_ROOT"
+distribute()
+{
+    local hex_file=$1
+    local zip_file="$2-$3-$4-$5.zip"
+
+    case "${platform}" in
+        nrf*|ncs*)
+            $NRFUTIL pkg generate --debug-mode --hw-version 52 --sd-req 0 --application "${hex_file}" --key-file /tmp/private.pem "${zip_file}"
+            ;;
+    esac
+
+    mv "${zip_file}" "$OUTPUT_ROOT"
+}
 
 # $1: The basename of the file to zip, e.g. ot-cli-ftd
 # $2: Thread version number, e.g. 1.2
-# $3: The binary path, defaulted as ./build-"$2"/bin/"$1"
-make_zip() {
-  local BINARY_PATH=${3:-"./build-$2/bin/$1"}
-  arm-none-eabi-objcopy -O ihex "$BINARY_PATH" "$1"-"$2".hex
-  $NRFUTIL pkg generate --debug-mode --hw-version 52 --sd-req 0 --application "$1"-"$2".hex --key-file /tmp/private.pem "$1"-"$2".zip
+# $3: The binary path (optional)
+package_ot()
+{
+    # Parse Args
+    local basename=$1
+    local thread_version=$2
+    local binary_path=${3:-"${build_dir}/bin/${basename}"}
+
+    # Get build info
+    local commit_id=$(cd "${repo_dir}"/openthread && git rev-parse --short HEAD)
+    local timestamp=$(date +%Y%m%d)
+
+    # Generate .hex file
+    local hex_file="${basename}"-"${thread_version}".hex
+    if [ ! -f "$binary_path" ]; then
+        echo "WARN: $binary_path does not exist. Skipping packaging"
+        return
+    fi
+    arm-none-eabi-objcopy -O ihex "$binary_path" "${hex_file}"
+
+    # Distribute
+    distribute "${hex_file}" "${basename}" "${thread_version}" "${timestamp}" "${commit_id}"
 }
 
-if [ "${REFERENCE_RELEASE_TYPE?}" = "certification" ]; then
-  (
-    cd ot-nrf528xx
-    git clean -xfd
-    COMMIT_ID=$(cd ../openthread && git rev-parse --short HEAD)
-    DATE=$(date +%Y%m%d)
-    rm -rf openthread
-    cp -r ../openthread .
-    OT_CMAKE_BUILD_DIR=build-1.2 ./script/build $PLATFORM USB_trans -DOT_THREAD_VERSION=1.2 "${BUILD_1_2_OPTIONS[@]}"
-    make_zip ot-cli-ftd 1.2
-    make_zip ot-rcp 1.2
-    mv ot-cli-ftd-1.2.zip ot-cli-ftd-$DATE-$COMMIT_ID-1.2.zip
-    mv ot-rcp-1.2.zip ot-rcp-$DATE-$COMMIT_ID-1.2.zip
-    mv ./*.zip "$OUTPUT_ROOT"
-    rm -rf openthread
-    git clean -xfd
-    git submodule update --force
-  )
+package_ncs()
+{
+    # Get build info
+    local commit_id=$(cd "${NCS_PATH?}"/nrf && git rev-parse --short HEAD)
+    local timestamp=$(date +%Y%m%d)
 
-  (
-    cd openthread-1.1
-    COMMIT_ID=$(git rev-parse --short HEAD)
-    DATE=$(date +%Y%m%d)
-    git clean -xfd
-    ./bootstrap
-    make -f examples/Makefile-nrf52840 "${BUILD_1_1_ENV[@]}"
-    make_zip ot-cli-ftd 1.1 output/nrf52840/bin/ot-cli-ftd
-    mv ot-cli-ftd-1.1.zip ot-cli-ftd-$DATE-$COMMIT_ID-1.1.zip
-    mv ./*.zip "$OUTPUT_ROOT"
-    git clean -xfd
-  )
-elif [ "${REFERENCE_RELEASE_TYPE}" = "1.3" ]; then
-  OT_CMAKE_BUILD_DIR=build-1.2 ./script/build $PLATFORM USB_trans -DOT_THREAD_VERSION=1.2
-  make_zip ot-rcp 1.2
-fi
+    distribute "/tmp/ncs_cli_1_1/zephyr/zephyr.hex" "ot-cli-ftd" "1.1" "${timestamp}" "${commit_id}"
+    distribute "/tmp/ncs_cli_1_2/zephyr/zephyr.hex" "ot-cli-ftd" "1.2" "${timestamp}" "${commit_id}"
+    distribute "/tmp/ncs_rcp_1_2/zephyr/zephyr.hex" "ot-rcp" "1.2" "${timestamp}" "${commit_id}"
+}
+
+# $1: Path to platform's repo, e.g. ot-nrf528xx
+# $2: Thread version number, e.g. 1.2
+build_ot()
+{
+    local platform_repo=$1
+    local thread_version=$2
+    shift 2
+
+    mkdir -p "$OUTPUT_ROOT"
+
+    case "${thread_version}" in
+        # Build OpenThread 1.2
+        "1.2")
+            cd ${platform_repo}
+
+            # Use OpenThread from top-level of repo
+            rm -rf openthread
+            ln -s ../openthread .
+
+            # Build
+            build_dir="${repo_dir}"/build-"${thread_version}"/"${platform}"
+            options=("${BUILD_1_2_OPTIONS[@]}")
+            OT_CMAKE_BUILD_DIR=${build_dir} ./script/build ${platform} ${build_type} "${options[@]}" "$@"
+
+            # Package and distribute
+            local dist_apps=(
+                ot-cli-ftd
+                ot-rcp
+            )
+            for app in ${dist_apps[@]}; do
+                package_ot "${app}" "${thread_version}"
+            done
+
+            # Clean up
+            rm -rf openthread
+            git clean -xfd
+            git submodule update --force
+            ;;
+
+        # Build OpenThread 1.1
+        "1.1")
+            cd openthread-1.1
+
+            # Prep
+            ./bootstrap
+
+            # Build
+            options=("${BUILD_1_1_ENV[@]}")
+            make -f examples/Makefile-${platform} "${options[@]}" "$@"
+
+            # Package and distribute
+            local dist_apps=(
+                ot-cli-ftd
+                ot-rcp
+            )
+            for app in ${dist_apps[@]}; do
+                package_ot ${app} ${thread_version} output/${platform}/bin/${app}
+            done
+
+            # Clean up
+            git clean -xfd
+            ;;
+    esac
+
+    cd ${repo_dir}
+}
+
+build_ncs()
+{
+  mkdir -p "$OUTPUT_ROOT"
+
+  if [ ! -d "${NCS_PATH?}/nrf" ]
+  then
+      echo "Nordic Connect SDK installation not found."
+      exit 1
+  fi
+
+  # Checkout required commit
+  local commit_hash=$(<${script_dir}'/../config/sdk-nrf-commit')
+  cd ${NCS_PATH?}/nrf
+  git checkout "$commit_hash" || die "ERROR: unable to checkout the specified sdk-nrf commit."
+  west update || die "ERROR: west update problem."
+  source ../zephyr/zephyr-env.sh
+  west config manifest.path nrf
+
+  # Build folder | nrf-sdk sample | Sample configuration
+  local cli_1_1=("/tmp/ncs_cli_1_1" "samples/openthread/cli/" "${script_dir}/../config/overlay-cli-1_1.conf")
+  local cli_1_2=("/tmp/ncs_cli_1_2" "samples/openthread/cli/" "${script_dir}/../config/overlay-cli-1_2.conf")
+  local rcp_1_2=("/tmp/ncs_rcp_1_2" "samples/openthread/coprocessor/" "${script_dir}/../config/overlay-rcp-1_2.conf")
+  local variants=(cli_1_1[@] cli_1_2[@] rcp_1_2[@])
+
+  for variant in ${variants[@]}; do
+      west build -d ${!variant:0:1} -b nrf52840dongle_nrf52840 -p always ${!variant:1:1} -- -DOVERLAY_CONFIG=${!variant:2:1}
+  done
+
+  package_ncs "ot-cli-ftd" "1.1"
+  package_ncs "ot-cli-ftd" "1.2"
+  package_ncs "ot-rcp" "1.2"
+}
+
+main()
+{
+    if [[ $# == 0 ]]; then
+        echo "Please specify a platform: ${OT_PLATFORMS[*]}"
+        exit 1
+    fi
+
+    # Check if the platform is supported.
+    platform="$1"
+    echo "${OT_PLATFORMS[@]}" | grep -wq "${platform}" || die "ERROR: Unsupported platform: ${platform}"
+    shift
+
+    # Print OUTPUT_ROOT. Error if OUTPUT_ROOT is not defined
+    echo "OUTPUT_ROOT=${OUTPUT_ROOT?}"
+
+    # ==========================================================================
+    # Prebuild
+    # ==========================================================================
+    case "${platform}" in
+        nrf*|ncs*)
+            # Setup nrfutil-linux
+            NRFUTIL=/tmp/nrfutil-linux
+            if [ ! -f $NRFUTIL ]; then
+            wget -O $NRFUTIL https://github.com/NordicSemiconductor/pc-nrfutil/releases/download/v6.1/nrfutil-linux
+            chmod +x $NRFUTIL
+            fi
+
+            # Generate private key
+            if [ ! -f /tmp/private.pem ]; then
+                $NRFUTIL keys generate /tmp/private.pem
+            fi
+            ;;
+    esac
+
+    # ==========================================================================
+    # Build
+    # ==========================================================================
+    if [ "${REFERENCE_RELEASE_TYPE?}" = "certification" ]; then
+        case "${platform}" in
+            nrf*)
+                build_type="USB_trans" "$@"
+                build_ot ot-nrf528xx 1.2 "$@"
+                build_ot ot-nrf528xx 1.1 "$@"
+                ;;
+            ncs*)
+                build_ncs
+                ;;
+        esac
+    elif [ "${REFERENCE_RELEASE_TYPE}" = "1.3" ]; then
+        case "${platform}" in
+            nrf*)
+                OT_CMAKE_BUILD_DIR=build-1.2 ./script/build $PLATFORM USB_trans -DOT_THREAD_VERSION=1.2
+                package ot-rcp 1.2
+                ;;
+        esac
+    fi
+
+}
+
+main "$@"

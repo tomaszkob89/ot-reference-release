@@ -56,6 +56,7 @@ main() {
 
   python3 -m git_archive_all "$STAGE_DIR"/repo.tar.gz
 
+  sudo rm -rf "$IMAGE_DIR"
   sudo mkdir -p "$IMAGE_DIR"
   sudo script/mount.bash "$STAGE_DIR"/raspbian.img "$IMAGE_DIR"
 
