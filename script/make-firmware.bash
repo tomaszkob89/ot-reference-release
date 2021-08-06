@@ -126,7 +126,7 @@ package_ot()
 package_ncs()
 {
     # Get build info
-    local commit_id=$(cd "${NCS_PATH?}"/nrf && git rev-parse --short HEAD)
+    local commit_id=$(git rev-parse --short HEAD)
     local timestamp=$(date +%Y%m%d)
 
     distribute "/tmp/ncs_cli_1_1/zephyr/zephyr.hex" "ot-cli-ftd" "1.1" "${timestamp}" "${commit_id}"
@@ -201,23 +201,32 @@ build_ot()
     cd ${repo_dir}
 }
 
+deploy_ncs()
+{
+    sudo apt install --no-install-recommends git cmake ninja-build gperf \
+        ccache dfu-util device-tree-compiler wget \
+        python3-dev python3-pip python3-setuptools python3-tk python3-wheel xz-utils file \
+        make gcc gcc-multilib g++-multilib libsdl2-dev
+        pip3 install --user west
+    cd ${script_dir}/../ncs
+    unset ZEPHYR_BASE
+    west init -m https://github.com/edmont/sdk-nrf --mr dev/ref-device || true
+    cd nrf
+    git checkout dev/ref-device
+    git pull origin
+    west update
+    cd ..
+    pip3 install --user -r zephyr/scripts/requirements.txt
+    pip3 install --user -r nrf/scripts/requirements.txt
+    pip3 install --user -r bootloader/mcuboot/scripts/requirements.txt
+    source zephyr/zephyr-env.sh
+    west config manifest.path nrf
+}
+
 build_ncs()
 {
   mkdir -p "$OUTPUT_ROOT"
-
-  if [ ! -d "${NCS_PATH?}/nrf" ]
-  then
-      echo "Nordic Connect SDK installation not found."
-      exit 1
-  fi
-
-  # Checkout required commit
-  local commit_hash=$(<${script_dir}'/../config/sdk-nrf-commit')
-  cd ${NCS_PATH?}/nrf
-  git checkout "$commit_hash" || die "ERROR: unable to checkout the specified sdk-nrf commit."
-  west update || die "ERROR: west update problem."
-  source ../zephyr/zephyr-env.sh
-  west config manifest.path nrf
+  deploy_ncs
 
   # Build folder | nrf-sdk sample | Sample configuration
   local cli_1_1=("/tmp/ncs_cli_1_1" "samples/openthread/cli/" "${script_dir}/../config/overlay-cli-1_1.conf")
@@ -225,6 +234,7 @@ build_ncs()
   local rcp_1_2=("/tmp/ncs_rcp_1_2" "samples/openthread/coprocessor/" "${script_dir}/../config/overlay-rcp-1_2.conf")
   local variants=(cli_1_1[@] cli_1_2[@] rcp_1_2[@])
 
+  cd nrf
   for variant in ${variants[@]}; do
       west build -d ${!variant:0:1} -b nrf52840dongle_nrf52840 -p always ${!variant:1:1} -- -DOVERLAY_CONFIG=${!variant:2:1}
   done

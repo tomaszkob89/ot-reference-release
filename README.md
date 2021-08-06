@@ -52,17 +52,6 @@ When `REFERENCE_RELEASE_TYPE` is `1.3`, reference release contains following com
 
 Note: Currently, only nRF52840 dongles are supported for CLI/RCP firmwares.
 
-## Nordic Connect SDK support
-
-When `REFERENCE_PLARFORM` is `ncs`, Nordic Connect SDK must be installed previouslly in the computer.
-See the [Getting Started guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/getting_started.html) on how to do so.
-
-Then `NCS_PATH` must be set pointing to the installation path. For example:
-
-```
-$ NCS_PATH="/home/user/repos/ncs" REFERENCE_PLARFORM=ncs REFERENCE_RELEASE_TYPE=certification ./script/make-reference-release.bash
-```
-
 # Contributing
 
 We would love for you to contribute to OpenThread and help make it even better than it is today! See our [Contributing Guidelines](https://github.com/openthread/openthread/blob/main/CONTRIBUTING.md) for more information.

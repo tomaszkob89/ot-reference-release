@@ -40,7 +40,7 @@ mkdir -p "$OUTPUT_ROOT"/ot-comm
       cp ot-br-posix/third_party/openthread/repo/tools/harness-thci/OpenThread.py "$OUTPUT_ROOT"
       ;;
     ncs*)
-      cp thci/OTNCS.py "$OUTPUT_ROOT"
+      cp thci/*.py "$OUTPUT_ROOT"
       ;;
   esac
 )

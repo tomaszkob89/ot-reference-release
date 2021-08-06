@@ -49,10 +49,10 @@ OUTPUT_ROOT="$OUTPUT_ROOT" ./script/make-raspbian.bash
 
 case "${REFERENCE_PLATFORM}" in
   nrf*)
-    cp -r doc/nRF5* "$OUTPUT_ROOT"
+    cp -r doc/OpenThread* "$OUTPUT_ROOT"
     ;;
   ncs*)
-    cp -r doc/OpenThread* "$OUTPUT_ROOT"
+    cp -r doc/nRF5* "$OUTPUT_ROOT"
     ;;
 esac
 

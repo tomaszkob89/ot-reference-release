@@ -29,7 +29,7 @@
 
 set -euxo pipefail
 
-IMAGE_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-01-12/2021-01-11-raspios-buster-armhf-lite.zip
+IMAGE_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/2021-05-07-raspios-buster-armhf-lite.zip
 echo "REFERENCE_RELEASE_TYPE=${REFERENCE_RELEASE_TYPE?}"
 echo "IN_CHINA=${IN_CHINA:=0}"
 echo "OUTPUT_ROOT=${OUTPUT_ROOT?}"
@@ -56,7 +56,6 @@ main() {
 
   python3 -m git_archive_all "$STAGE_DIR"/repo.tar.gz
 
-  sudo rm -rf "$IMAGE_DIR"
   sudo mkdir -p "$IMAGE_DIR"
   sudo script/mount.bash "$STAGE_DIR"/raspbian.img "$IMAGE_DIR"
 
