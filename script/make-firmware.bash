@@ -208,6 +208,7 @@ deploy_ncs()
         python3-dev python3-pip python3-setuptools python3-tk python3-wheel xz-utils file \
         make gcc gcc-multilib g++-multilib libsdl2-dev
         pip3 install --user west
+    mkdir ${script_dir}/../ncs
     cd ${script_dir}/../ncs
     unset ZEPHYR_BASE
     west init -m https://github.com/edmont/sdk-nrf --mr dev/ref-device || true
