@@ -1299,7 +1299,7 @@ class OpenThreadTHCI(object):
         if TESTHARNESS_VERSION == TESTHARNESS_1_2:
             self._disconnect()
             self._connect()
-        
+
         self.isPowerDown = True
 
     @API
@@ -2439,6 +2439,13 @@ class OpenThreadTHCI(object):
             False: fail to start joiner
         """
         self.log("joinCommissioned on channel %s", self.getChannel())
+
+        if self.deviceRole in [
+                Thread_Device_Role.Leader,
+                Thread_Device_Role.Router,
+                Thread_Device_Role.REED,
+        ]:
+            self.__setRouterSelectionJitter(1)
         self.__executeCommand('ifconfig up')
         strPSKd = self.__normalizePSKd(strPSKd)
         cmd = 'joiner start %s %s' % (strPSKd, self.provisioningUrl)
