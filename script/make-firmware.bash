@@ -212,18 +212,18 @@ deploy_ncs()
     mkdir -p ${script_dir}/../ncs
     cd ${script_dir}/../ncs
     unset ZEPHYR_BASE
-    west init -m https://github.com/nrfconnect/sdk-nrf --mr master || true
+    /home/${USER}/.local/bin/west init -m https://github.com/nrfconnect/sdk-nrf --mr master || true
     cd nrf
     git checkout master
     git branch -D config_branch || true
     git checkout -b config_branch "$commit_hash" || die "ERROR: unable to checkout the specified sdk-nrf commit."
-    west update
+    /home/${USER}/.local/bin/west update
     cd ..
     pip3 install --user -r zephyr/scripts/requirements.txt
     pip3 install --user -r nrf/scripts/requirements.txt
     pip3 install --user -r bootloader/mcuboot/scripts/requirements.txt
     source zephyr/zephyr-env.sh
-    west config manifest.path nrf
+    /home/${USER}/.local/bin/west config manifest.path nrf
 }
 
 build_ncs()
@@ -239,7 +239,7 @@ build_ncs()
 
   cd nrf
   for variant in ${variants[@]}; do
-      west build -d ${!variant:0:1} -b nrf52840dongle_nrf52840 -p always ${!variant:1:1} -- -DOVERLAY_CONFIG=${!variant:2:1}
+      /home/${USER}/.local/bin/west build -d ${!variant:0:1} -b nrf52840dongle_nrf52840 -p always ${!variant:1:1} -- -DOVERLAY_CONFIG=${!variant:2:1}
   done
 
   package_ncs "ot-cli-ftd" "1.1"
