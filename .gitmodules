@@ -1,6 +1,7 @@
 [submodule "ot-br-posix"]
 	path = ot-br-posix
 	url = https://github.com/lmaciejonczyk/ot-br-posix
+	branch = usb_trans
 [submodule "ot-nrf528xx"]
 	path = ot-nrf528xx
 	url = https://github.com/openthread/ot-nrf528xx
