@@ -272,28 +272,35 @@ class OpenThreadTHCI(object):
                    self.logThreadStatus != self.logStatus['stop']):
                 pass
 
-        self.__sendCommand(cmd)
-        response = []
+        try:
+            self.__sendCommand(cmd)
+            response = []
 
-        t_end = time.time() + timeout
-        while time.time() < t_end:
-            line = self.__readCliLine()
-            if line is None:
-                time.sleep(0.01)
-                continue
+            t_end = time.time() + timeout
+            while time.time() < t_end:
+                line = self.__readCliLine()
+                if line is None:
+                    time.sleep(0.01)
+                    continue
 
-            self.log("readline: %s", line)
-            response.append(line)
+                self.log("readline: %s", line)
+                response.append(line)
 
-            if line.endswith('Done'):
-                break
+                if line.endswith('Done'):
+                    break
+                else:
+                    m = OpenThreadTHCI._COMMAND_OUTPUT_ERROR_PATTERN.match(line)
+                    if m is not None:
+                        code, msg = m.groups()
+                        raise CommandError(int(code), msg)
             else:
-                m = OpenThreadTHCI._COMMAND_OUTPUT_ERROR_PATTERN.match(line)
-                if m is not None:
-                    code, msg = m.groups()
-                    raise CommandError(int(code), msg)
-        else:
-            raise Exception('%s: failed to find end of response: %s' % (self, response))
+                raise Exception('%s: failed to find end of response: %s' % (self, response))
+
+        except SerialException as e:
+            ModuleHelper.WriteIntoDebugLogger('__executeCommand() Error: ' + str(e))
+            self._disconnect()
+            self._connect()
+            raise Exception('The communication has been recreated')
 
         return response
 
