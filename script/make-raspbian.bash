@@ -33,6 +33,7 @@ IMAGE_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_li
 echo "REFERENCE_RELEASE_TYPE=${REFERENCE_RELEASE_TYPE?}"
 echo "IN_CHINA=${IN_CHINA:=0}"
 echo "OUTPUT_ROOT=${OUTPUT_ROOT?}"
+echo "REFERENCE_PLATFORM=${REFERENCE_PLATFORM?}"
 
 if [ "$REFERENCE_RELEASE_TYPE" != "certification" ] && [ "$REFERENCE_RELEASE_TYPE" != "1.3" ]; then
   echo "Invalid reference release type: $REFERENCE_RELEASE_TYPE"
