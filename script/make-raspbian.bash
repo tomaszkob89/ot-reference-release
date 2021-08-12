@@ -33,6 +33,7 @@ IMAGE_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_li
 echo "REFERENCE_RELEASE_TYPE=${REFERENCE_RELEASE_TYPE?}"
 echo "IN_CHINA=${IN_CHINA:=0}"
 echo "OUTPUT_ROOT=${OUTPUT_ROOT?}"
+echo "REFERENCE_PLATFORM=${REFERENCE_PLATFORM?}"
 
 if [ "$REFERENCE_RELEASE_TYPE" != "certification" ] && [ "$REFERENCE_RELEASE_TYPE" != "1.3" ]; then
   echo "Invalid reference release type: $REFERENCE_RELEASE_TYPE"
@@ -66,6 +67,9 @@ main() {
     sudo tar xzf "$STAGE_DIR"/repo.tar.gz --strip-components 1 -C "$IMAGE_DIR"/home/pi/repo
     sudo ./qemu-setup.sh "$IMAGE_DIR"
     sudo chroot "$IMAGE_DIR" /bin/bash /home/pi/repo/script/otbr-setup.bash "${REFERENCE_RELEASE_TYPE?}" "$IN_CHINA"
+    if [ "${REFERENCE_PLATFORM?}" = "ncs" ]; then
+      sudo chroot "$IMAGE_DIR" /bin/bash /home/pi/repo/script/otbr-setup-ncs.bash "${REFERENCE_PLATFORM?}" "$IN_CHINA"
+    fi
     sudo chroot "$IMAGE_DIR" /bin/bash /home/pi/repo/script/otbr-cleanup.bash
     echo "enable_uart=1" | sudo tee -a "$IMAGE_DIR"/boot/config.txt
     echo "dtoverlay=pi3-disable-bt" | sudo tee -a "$IMAGE_DIR"/boot/config.txt
