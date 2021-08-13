@@ -1426,7 +1426,8 @@ class OpenThreadTHCI(object):
         self.__sendCommand('factoryreset', expectEcho=False)
         timeout = 10
 
-        for _ in range(int(timeout / 0.3)):
+        start_time = time.time()
+        while time.time() < start_time + timeout:
             time.sleep(0.3)
             if TESTHARNESS_VERSION == TESTHARNESS_1_2 and not self.IsBorderRouter:
                 self._disconnect()
@@ -3607,6 +3608,9 @@ class OTNCS(OpenThreadTHCI, IThci):
             return self.__lines.pop(0)
 
     def _cliWriteLine(self, line):
+        # NCS adaptation
+        if not line.startswith('ot '):
+            line = 'ot %s' % line
         self.__socWrite(line + '\r')
 
     def _onCommissionStart(self):

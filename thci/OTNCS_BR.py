@@ -45,8 +45,6 @@ from GRLLibs.UtilityModules.ModuleHelper import ModuleHelper
 from IThci import IThci
 from THCI.OTNCS import OpenThreadTHCI, watched, API
 
-# from THCI.OpenThread import OpenThreadTHCI, watched, API
-
 RPI_FULL_PROMPT = 'pi@raspberrypi:~$ '
 RPI_USERNAME_PROMPT = 'raspberrypi login: '
 RPI_PASSWORD_PROMPT = 'Password: '
