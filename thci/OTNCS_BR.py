@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2020, The OpenThread Authors.
+# Copyright (c) 2021 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+# Copyright (c) 2016, The OpenThread Authors.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,10 +29,11 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+
 """
 >> Thread Host Controller Interface
->> Device : OpenThread_BR THCI
->> Class : OpenThread_BR
+>> Device : OTNCS_BR THCI
+>> Class : OTNCS_BR
 """
 import logging
 import re
@@ -38,7 +43,9 @@ import time
 import serial
 from GRLLibs.UtilityModules.ModuleHelper import ModuleHelper
 from IThci import IThci
-from THCI.OpenThread import OpenThreadTHCI, watched, API
+from THCI.OTNCS import OpenThreadTHCI, watched, API
+
+# from THCI.OpenThread import OpenThreadTHCI, watched, API
 
 RPI_FULL_PROMPT = 'pi@raspberrypi:~$ '
 RPI_USERNAME_PROMPT = 'raspberrypi login: '
@@ -279,9 +286,9 @@ class SerialHandle:
         self.__bashWrite(line + '\n')
 
 
-class OpenThread_BR(OpenThreadTHCI, IThci):
+class OTNCS_BR(OpenThreadTHCI, IThci):
     DEFAULT_COMMAND_TIMEOUT = 20
-
+    NCS_CMD_PREFIX = ''
     IsBorderRouter = True
 
     def _connect(self):
@@ -346,7 +353,7 @@ class OpenThread_BR(OpenThreadTHCI, IThci):
     @API
     def send_udp(self, interface, dst, port, payload):
         if interface == 0:  # Thread Interface
-            super(OpenThread_BR, self).send_udp(interface, dst, port, payload)
+            super(OTNCS_BR, self).send_udp(interface, dst, port, payload)
             return
 
         if interface == 1:
@@ -454,7 +461,7 @@ class OpenThread_BR(OpenThreadTHCI, IThci):
         if eth:
             return self.__getEthGUA(filterByPrefix=filterByPrefix)
         else:
-            return super(OpenThread_BR, self).getGUA(filterByPrefix=filterByPrefix)
+            return super(OTNCS_BR, self).getGUA(filterByPrefix=filterByPrefix)
 
     def __getEthGUA(self, filterByPrefix=None):
         globalAddrs = []

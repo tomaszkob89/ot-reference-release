@@ -242,9 +242,14 @@ class OpenThreadTHCI(object):
     def _onCommissionStop(self):
         """Called when commissioning stops."""
 
+    def __add_cmd_prefix(self, cmd):
+        if not self.IsBorderRouter:
+            cmd = '{prefix} {cmd}'.format(prefix='ot', cmd=cmd)
+        return cmd
+
     def __sendCommand(self, cmd, expectEcho=True):
         # nRF_Connect_SDK adaptation
-        cmd = 'ot %s' % cmd
+        cmd = self.__add_cmd_prefix(cmd)
 
         self.log("command: %s", cmd)
         self._cliWriteLine(cmd)
@@ -1303,7 +1308,7 @@ class OpenThreadTHCI(object):
         print('%s call powerDown' % self)
         self.__sendCommand('reset', expectEcho=False)
 
-        if TESTHARNESS_VERSION == TESTHARNESS_1_2:
+        if TESTHARNESS_VERSION == TESTHARNESS_1_2 and not self.IsBorderRouter:
             self._disconnect()
             self._connect()
 
@@ -1330,7 +1335,7 @@ class OpenThreadTHCI(object):
         try:
             self.__sendCommand('reset', expectEcho=False)
 
-            if TESTHARNESS_VERSION == TESTHARNESS_1_2:
+            if TESTHARNESS_VERSION == TESTHARNESS_1_2 and not self.IsBorderRouter:
                 self._disconnect()
                 self._connect()
 
@@ -1421,9 +1426,9 @@ class OpenThreadTHCI(object):
         self.__sendCommand('factoryreset', expectEcho=False)
         timeout = 10
 
-        for _ in range(int(timeout/0.3)):
+        for _ in range(int(timeout / 0.3)):
             time.sleep(0.3)
-            if TESTHARNESS_VERSION == TESTHARNESS_1_2:
+            if TESTHARNESS_VERSION == TESTHARNESS_1_2 and not self.IsBorderRouter:
                 self._disconnect()
                 self._connect()
             try:
@@ -1688,7 +1693,7 @@ class OpenThreadTHCI(object):
         try:
             self.__sendCommand('reset', expectEcho=False)
 
-            if TESTHARNESS_VERSION == TESTHARNESS_1_2:
+            if TESTHARNESS_VERSION == TESTHARNESS_1_2 and not self.IsBorderRouter:
                 self._disconnect()
                 self._connect()
 
@@ -3602,9 +3607,6 @@ class OTNCS(OpenThreadTHCI, IThci):
             return self.__lines.pop(0)
 
     def _cliWriteLine(self, line):
-        # NCS adaptation
-        if not line.startswith('ot '):
-            line = 'ot %s' % line
         self.__socWrite(line + '\r')
 
     def _onCommissionStart(self):
