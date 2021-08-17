@@ -42,7 +42,6 @@ def edit_otbr_defaults(device_path):
         content = fh.read()
         re.search(dev_regex, content)
         new_content = re.sub(dev_regex, fr'\g<1>{device_path}\g<2>', content)
-        # content = fh.read()
     logging.info(f"New content of {OTBR_AGENT_DEFAULTS}:\n{new_content}")
     with open(OTBR_AGENT_DEFAULTS, 'w') as fh:
         fh.write(new_content)
