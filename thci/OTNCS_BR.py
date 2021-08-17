@@ -39,6 +39,7 @@ import logging
 import re
 import sys
 import time
+import ipaddress
 
 import serial
 from GRLLibs.UtilityModules.ModuleHelper import ModuleHelper
@@ -477,14 +478,18 @@ class OTNCS_BR(OpenThreadTHCI, IThci):
                 continue
 
             addr = line[1].split('/')[0]
-            addr = ModuleHelper.GetFullIpv6Address(addr).lower()
+            addr = str(ipaddress.IPv6Address(addr.decode()).exploded)
             globalAddrs.append(addr)
 
         if not filterByPrefix:
             return globalAddrs[0]
         else:
+            if filterByPrefix[-2:] != '::':
+                filterByPrefix = '%s::' % filterByPrefix
+            prefix = ipaddress.IPv6Address(filterByPrefix.decode())
             for fullIp in globalAddrs:
-                if fullIp.startswith(filterByPrefix):
+                address = ipaddress.IPv6Address(fullIp.decode())
+                if address.packed[:8] == prefix.packed[:8]:
                     return fullIp
 
     def _cliReadLine(self):
