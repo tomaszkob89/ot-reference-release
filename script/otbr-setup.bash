@@ -73,7 +73,7 @@ echo "127.0.0.1 $(hostname)" >>/etc/hosts
 chown -R pi:pi /home/pi/repo
 cd /home/pi/repo/ot-br-posix
 apt-get update
-apt-get install -y --no-install-recommends git python3-pip
+apt-get install -y --no-install-recommends git python3-pip dnsutils
 su -c "${BUILD_OPTIONS[*]} script/bootstrap" pi
 
 rm -rf /home/pi/repo/ot-br-posix/third_party/openthread/repo

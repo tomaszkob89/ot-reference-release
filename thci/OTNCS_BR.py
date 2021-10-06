@@ -541,7 +541,7 @@ interface eth0
         AdvAutonomous on;
         AdvRouterAddr on;
     };
-    
+
     prefix fd00:7d03:7d03:7d03::/64
     {
         AdvOnLink on;
@@ -603,3 +603,9 @@ EOF"
         output = self.bash_unwatched('sudo grep "otbr-agent" /var/log/syslog')
         for line in output:
             self.log('%s', line)
+
+    @API
+    def mdns_query(self):
+        print('mdns_query')
+        self.bash('dig -p 5353 @ff02::fb _meshcop._udp.local ptr')
+    
