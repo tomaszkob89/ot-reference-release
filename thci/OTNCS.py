@@ -947,7 +947,7 @@ class OpenThreadTHCI(object):
                 macAddr64 = self.__executeCommand('eui64')[0]
             elif bType == MacType.HashMac:
                 macAddr64 = self.__executeCommand('joiner id')[0]
-            elif TESTHARNESS_VERSION == TESTHARNESS_1_2 and bType == MacType.EthMac:
+            elif TESTHARNESS_VERSION == TESTHARNESS_1_2 and bType == MacType.EthMac and self.IsBorderRouter:
                 return self._deviceGetEtherMac()
             else:
                 macAddr64 = self.__executeCommand('extaddr')[0]
@@ -1252,19 +1252,6 @@ class OpenThreadTHCI(object):
             self.__startOpenThread()
             self.wait_for_attach_to_the_network(expected_role=eRoleId, timeout=self.NETWORK_ATTACHMENT_TIMEOUT,
                                                 raise_assert=True)
-            mac = self.getMAC()
-            rloc16 = self.getRloc16()
-            ula64 = self.getULA64()
-            ml64 = self.getML16()
-            ll64 = self.getLL64()
-
-            self.log('{} [{}] device reports addresses:'.format(self, self.getDeviceRole()))
-            self.log('MAC: {}'.format(mac))
-            self.log('RLOC16: {}'.format(rloc16))
-            self.log('ULA64: {}'.format(ula64))
-            self.log('Mesh Local: {}'.format(ml64))
-            self.log('Link Local: {}'.format(ll64))
-
             return True
         except Exception as e:
             ModuleHelper.WriteIntoDebugLogger('joinNetwork() Error: ' + str(e))
@@ -2370,7 +2357,8 @@ class OpenThreadTHCI(object):
         """
         print('%s call startCollapsedCommissioner' % self)
         if self.__startOpenThread():
-            self.sleep(20)
+            self.wait_for_attach_to_the_network(expected_role=self.deviceRole, timeout=self.NETWORK_ATTACHMENT_TIMEOUT,
+                                                raise_assert=True)
             cmd = 'commissioner start'
             print(cmd)
             if self.__executeCommand(cmd)[-1] == 'Done':
@@ -2506,7 +2494,8 @@ class OpenThreadTHCI(object):
 
             self.setMAC(self.mac)
             self.__executeCommand('thread start')
-            self.sleep(30)
+            self.wait_for_attach_to_the_network(expected_role=self.deviceRole, timeout=self.NETWORK_ATTACHMENT_TIMEOUT,
+                                                raise_assert=True)
             return True
         else:
             return False
@@ -2767,7 +2756,10 @@ class OpenThreadTHCI(object):
                 cmd += pskc
 
             if listSecurityPolicy is not None:
-                cmd += '0c03'
+                if self.DeviceCapability == DevCapb.V1_1:
+                    cmd += '0c03'
+                else:
+                    cmd += '0c04'
 
                 rotationTime = 0
                 policyBits = 0
@@ -2793,7 +2785,11 @@ class OpenThreadTHCI(object):
                 else:
                     # new passing way listSecurityPolicy=[3600, 0b11001111]
                     rotationTime = listSecurityPolicy[0]
-                    policyBits = listSecurityPolicy[1]
+                    # bit order
+                    if self.DeviceCapability != DevCapb.V1_1:
+                        policyBits = listSecurityPolicy[1] << 8 | listSecurityPolicy[2]
+                    else:
+                        policyBits = listSecurityPolicy[1]
 
                 policy = str(hex(rotationTime))[2:]
 
@@ -2802,7 +2798,16 @@ class OpenThreadTHCI(object):
 
                 cmd += policy
 
-                cmd += str(hex(policyBits))[2:]
+                flags0 = str(hex(policyBits & 0x00ff))[2:]
+                if len(flags0) < 2:
+                    flags0 = flags0.ljust(2, '0')
+                cmd += flags0
+
+                if self.DeviceCapability != DevCapb.V1_1:
+                    flags1 = str(hex((policyBits & 0xff00) >> 8))[2:]
+                    if len(flags1) < 2:
+                        flags1 = flags1.ljust(2, '0')
+                    cmd += flags1
 
             if xCommissioningSessionId is not None:
                 cmd += '0b02'
