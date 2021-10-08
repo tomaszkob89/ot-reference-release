@@ -358,11 +358,9 @@ class OTNCS_BR(OpenThreadTHCI, IThci):
         if interface == 1:
             ifname = 'eth0'
         else:
-            print('invalid interface')
-            return
-
-        cmd = 'sudo /home/pi/ot-br-posix/script/reference-device/send_udp.py %s %s %s %s' % (ifname, dst, port,
-                                                                                             payload)
+            raise AssertionError('Invalid interface set to send UDP: {} '
+                                 'Available interface options: 0 - Thread; 1 - Ethernet'.format(interface))
+        cmd = 'sudo /home/pi/reference-device/send_udp.py %s %s %s %s' % (ifname, dst, port, payload)
         print(cmd)
         self.bash(cmd)
 
