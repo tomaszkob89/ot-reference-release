@@ -1270,9 +1270,10 @@ class OpenThreadTHCI(object):
             else:
                 return False
 
-        if self._update_router_status and expected_role == Thread_Device_Role.Router:
+        if self._update_router_status:
             self.__updateRouterStatus()
 
+        if expected_role == Thread_Device_Role.Router:
             while time.time() < start_time + timeout:
                 time.sleep(0.3)
                 if self.getDeviceRole() == "router":
