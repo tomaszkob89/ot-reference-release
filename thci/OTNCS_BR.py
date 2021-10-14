@@ -317,6 +317,8 @@ class OTNCS_BR(OpenThreadTHCI, IThci):
     def _deviceAfterReset(self):
         self.__dumpSyslog()
         self.__truncateSyslog()
+        if not self.IsHost:
+            self.bash('sudo service otbr-agent restart')
 
     @API
     def setupHost(self, setDua=False):
@@ -615,4 +617,3 @@ EOF"
     def mdns_query(self):
         print('mdns_query')
         self.bash('dig -p 5353 @ff02::fb _meshcop._udp.local ptr')
-    
