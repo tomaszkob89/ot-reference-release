@@ -617,3 +617,15 @@ EOF"
     def mdns_query(self):
         print('mdns_query')
         self.bash('dig -p 5353 @ff02::fb _meshcop._udp.local ptr')
+
+    # Override powerDown
+    @API
+    def powerDown(self):
+        print('powerDown')
+        self.bash('sudo service otbr-agent stop')
+
+    # Override powerUp
+    @API
+    def powerUp(self):
+        print('powerUp')
+        self.bash('sudo service otbr-agent start')
