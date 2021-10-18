@@ -3477,7 +3477,8 @@ class OpenThreadTHCI(object):
                     pass
                 else:
                     raise
-
+    
+    @API
     def deregisterMulticast(self, sAddr):
         """
         Unsubscribe to a given IPv6 address.
@@ -3490,7 +3491,12 @@ class OpenThreadTHCI(object):
             sAddr = [sAddr]
         self.externalCommissioner.MLR(sAddr, 0)
         return True
-
+    
+    @API
+    def getMlrLogs(self):
+        return self.externalCommissioner.getMlrLogs()
+    
+    
     @API
     def migrateNetwork(self, channel=None, net_name=None):
         """migrate to another Thread Partition 'net_name' (could be None)
