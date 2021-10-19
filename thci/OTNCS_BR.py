@@ -623,14 +623,11 @@ EOF"
     def powerDown(self):
         print('powerDown')
         self.bash('sudo service otbr-agent stop')
-        self.isPowerDown = True
+        super(OTNCS_BR, self).powerDown()
 
     # Override powerUp
     @API
     def powerUp(self):
         print('powerUp')
         self.bash('sudo service otbr-agent start')
-        self.isPowerDown = False
-
-        if not self.__isOpenThreadRunning():
-            self.__startOpenThread()
+        super(OTNCS_BR, self).powerUp()
