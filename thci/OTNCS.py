@@ -2788,7 +2788,7 @@ class OpenThreadTHCI(object):
                     rotationTime = listSecurityPolicy[0]
                     # bit order
                     if self.DeviceCapability != DevCapb.V1_1:
-                        policyBits = listSecurityPolicy[1] << 8 | listSecurityPolicy[2]
+                        policyBits = listSecurityPolicy[2] << 8 | listSecurityPolicy[1]
                     else:
                         policyBits = listSecurityPolicy[1]
 
