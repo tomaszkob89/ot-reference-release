@@ -371,7 +371,7 @@ class OTNCS_BR(OpenThreadTHCI, IThci):
         ifname = 'eth0'
         dst = 'ff02::1'
 
-        cmd = 'sudo /home/pi/ot-br-posix/script/reference-device/send_mld_query.py %s %s' % (ifname, dst)
+        cmd = 'sudo /home/pi/reference-device/send_mld_query.py %s %s' % (ifname, dst)
         print(cmd)
         self.bash(cmd)
 
