@@ -1287,6 +1287,11 @@ class OpenThreadTHCI(object):
 
             return True
 
+        if expected_role in (Thread_Device_Role.BR_1, Thread_Device_Role.BR_2):
+            if self.getDeviceRole() != "leader":
+                # Add some delay for service registration
+                time.sleep(3)
+
     @API
     def getNetworkFragmentID(self):
         """get current partition id of Thread Network Partition from LeaderData
@@ -3477,7 +3482,7 @@ class OpenThreadTHCI(object):
                     pass
                 else:
                     raise
-    
+
     @API
     def deregisterMulticast(self, sAddr):
         """
@@ -3491,12 +3496,12 @@ class OpenThreadTHCI(object):
             sAddr = [sAddr]
         self.externalCommissioner.MLR(sAddr, 0)
         return True
-    
+
     @API
     def getMlrLogs(self):
         return self.externalCommissioner.getMlrLogs()
-    
-    
+
+
     @API
     def migrateNetwork(self, channel=None, net_name=None):
         """migrate to another Thread Partition 'net_name' (could be None)
