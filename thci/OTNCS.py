@@ -3344,6 +3344,13 @@ class OpenThreadTHCI(object):
         if not self.__isUdpOpened:
             cmd = 'udp open'
             self.__executeCommand(cmd)
+
+            # Bind to RLOC address and first dynamic port
+            rlocAddr = self.getRloc()
+
+            cmd = 'udp bind %s 49152' % rlocAddr
+            self.__executeCommand(cmd)
+
             self.__isUdpOpened = True
 
     @API
