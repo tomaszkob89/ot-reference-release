@@ -1287,7 +1287,7 @@ class OpenThreadTHCI(object):
 
             return True
 
-        if expected_role in (Thread_Device_Role.BR_1, Thread_Device_Role.BR_2):
+        if self.IsBackboneRouter:
             if self.getDeviceRole() != "leader":
                 # Add some delay for service registration
                 time.sleep(3)
