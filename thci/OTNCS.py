@@ -35,25 +35,18 @@
 >> Device : OTNCS THCI
 >> Class : OTNCS
 """
-
 import functools
+import ipaddress
 import logging
 import random
 import re
 import socket
 import time
-from Queue import Queue
 from abc import abstractmethod
-from serial.serialutil import SerialException
 
-import ipaddress
 import serial
-from GRLLibs.ThreadPacket.PlatformPackets import PlatformDiagnosticPacket, PlatformPackets
-from GRLLibs.UtilityModules.ModuleHelper import ModuleHelper, ThreadRunner
-from GRLLibs.UtilityModules.Plugins.AES_CMAC import Thread_PBKDF2
-from GRLLibs.UtilityModules.Test import Thread_Device_Role, Device_Data_Requirement, MacType
-from GRLLibs.UtilityModules.enums import PlatformDiagnosticPacket_Direction, PlatformDiagnosticPacket_Type
-from IThci import IThci
+from Queue import Queue
+from serial.serialutil import SerialException
 
 TESTHARNESS_1_1 = '1.1'
 TESTHARNESS_1_2 = '1.2'
@@ -63,13 +56,32 @@ if 'Thread1.2' in __file__:
 else:
     TESTHARNESS_VERSION = TESTHARNESS_1_1
 
+from GRLLibs.ThreadPacket.PlatformPackets import (
+    PlatformDiagnosticPacket,
+    PlatformPackets,
+)
+from GRLLibs.UtilityModules.ModuleHelper import ModuleHelper, ThreadRunner
+from GRLLibs.UtilityModules.Plugins.AES_CMAC import Thread_PBKDF2
+from GRLLibs.UtilityModules.Test import (
+    Thread_Device_Role,
+    Device_Data_Requirement,
+    MacType,
+)
+from GRLLibs.UtilityModules.enums import (
+    PlatformDiagnosticPacket_Direction,
+    PlatformDiagnosticPacket_Type,
+)
+
 if TESTHARNESS_VERSION == TESTHARNESS_1_2:
+    from GRLLibs.UtilityModules.enums import (
+        DevCapb,)
+
     import commissioner
-    from GRLLibs.UtilityModules.enums import DevCapb
     from commissioner_impl import OTCommissioner
 
+from IThci import IThci
 
-LINESEPX = re.compile(r'\r\n|\r|\n')
+LINESEPX = re.compile(r'\r\n|\n')
 """regex: used to split lines"""
 
 LOGX = re.compile(r'((\[(NONE|CRIT|WARN|NOTE|INFO|DEBG)\])'
@@ -109,6 +121,7 @@ def watched(func):
         global _callStackDepth
         callstr = '====' * _callStackDepth + "> %s%s%s" % (func_name, str(args) if args else "",
                                                            str(kwargs) if kwargs else "")
+
         _callStackDepth += 1
         try:
             ret = func(self, *args, **kwargs)
@@ -187,6 +200,9 @@ class OpenThreadTHCI(object):
     externalCommissioner = None
     _update_router_status = False
 
+    __cmdPrefix = ''
+    __lineSepX = LINESEPX
+
     if TESTHARNESS_VERSION == TESTHARNESS_1_2:
         _ROLE_MODE_DICT = {
             Thread_Device_Role.Leader: 'rdn',
@@ -243,15 +259,8 @@ class OpenThreadTHCI(object):
     def _onCommissionStop(self):
         """Called when commissioning stops."""
 
-    def __add_cmd_prefix(self, cmd):
-        if not self.IsBorderRouter:
-            cmd = '{prefix} {cmd}'.format(prefix='ot', cmd=cmd)
-        return cmd
-
     def __sendCommand(self, cmd, expectEcho=True):
-        # nRF_Connect_SDK adaptation
-        cmd = self.__add_cmd_prefix(cmd)
-
+        cmd = self.__cmdPrefix + cmd
         self.log("command: %s", cmd)
         self._cliWriteLine(cmd)
         if expectEcho:
@@ -373,6 +382,7 @@ class OpenThreadTHCI(object):
         # params example: {'EUI': 1616240311388864514L, 'SerialBaudRate': None, 'TelnetIP': '192.168.8.181', 'SerialPort': None, 'Param7': None, 'Param6': None, 'Param5': 'ip', 'TelnetPort': '22', 'Param9': None, 'Param8': None}
 
         try:
+
             ipaddress.ip_address(self.port)
             # handle TestHarness Discovery Protocol
             self.connectType = 'ip'
@@ -390,6 +400,7 @@ class OpenThreadTHCI(object):
             self.telnetPassword = 'raspberry' if params.get('Param7') is None else params.get('Param7')
 
         self.mac = params.get('EUI')
+
         self.UIStatusMsg = ''
         self.AutoDUTEnable = False
         self._is_net = False  # whether device is through ser2net
@@ -406,14 +417,14 @@ class OpenThreadTHCI(object):
             'failed': 'failed',
         }
         self.logThreadStatus = self.logStatus['stop']
+
         self.deviceConnected = False
 
         # init serial port
         self._connect()
-
+        self.__detectZephyr()
         if TESTHARNESS_VERSION == TESTHARNESS_1_2:
             self.__discoverDeviceCapability()
-
         self.UIStatusMsg = self.getVersionNumber()
 
         if self.firmwarePrefix in self.UIStatusMsg:
@@ -551,7 +562,8 @@ class OpenThreadTHCI(object):
             else:
                 self.hasActiveDatasetToCommit = False
 
-        # Restore allowlist/denylist address filter mode if rejoin after the reset
+        # Restore allowlist/denylist address filter mode if rejoin after
+        # reset
         if self.isPowerDown:
             if self._addressfilterMode == 'allowlist':
                 if self.__setAddressfilterMode('allowlist'):
@@ -633,7 +645,8 @@ class OpenThreadTHCI(object):
         detached_states = ["detached", "disabled"]
         return self.__executeCommand('state')[0] not in detached_states
 
-    # rloc16 might be hex string or integer, need to return actual allocated router id
+    # rloc16 might be hex string or integer, need to return actual allocated
+    # router id
     def __convertRlocToRouterId(self, xRloc16):
         """mapping Rloc16 to router id
 
@@ -1219,7 +1232,7 @@ class OpenThreadTHCI(object):
             elif eRoleId == Thread_Device_Role.SED:
                 print('join as sleepy end device')
                 mode = '-'
-                self.__setPollPeriod(self.sedPollPeriod)
+                self.__setPollPeriod(self.__sedPollPeriod)
             elif eRoleId == Thread_Device_Role.SSED:
                 print('join as SSED')
                 mode = '-'
@@ -1248,6 +1261,7 @@ class OpenThreadTHCI(object):
 
             # set Thread device mode with a given role
             self.__setDeviceMode(mode)
+
             # start OpenThread
             self.__startOpenThread()
             self.wait_for_attach_to_the_network(expected_role=eRoleId, timeout=self.NETWORK_ATTACHMENT_TIMEOUT,
@@ -1373,7 +1387,7 @@ class OpenThreadTHCI(object):
             raise AssertionError("Could not connect with OT device {} after reset.".format(self))
 
         if self.deviceRole == Thread_Device_Role.SED:
-            self.__setPollPeriod(self.sedPollPeriod)
+            self.__setPollPeriod(self.__sedPollPeriod)
 
     @API
     def reboot(self):
@@ -1476,7 +1490,9 @@ class OpenThreadTHCI(object):
     def reset(self):
         """factory reset"""
         print('%s call reset' % self)
+
         self._deviceBeforeReset()
+
         self.__sendCommand('factoryreset', expectEcho=False)
         timeout = 10
 
@@ -1542,9 +1558,9 @@ class OpenThreadTHCI(object):
         self.securityPolicyFlags = 'onrcb'
         self.activetimestamp = ModuleHelper.Default_ActiveTimestamp
         # self.sedPollingRate = ModuleHelper.Default_Harness_SED_Polling_Rate
-        self.sedPollPeriod = 3 * 1000    # in milliseconds
+        self.__sedPollPeriod = 3 * 1000  # in milliseconds
         self.ssedTimeout = 30
-        self.cslPeriod = 500    # in milliseconds
+        self.cslPeriod = 500  # in milliseconds
         self.deviceRole = None
         self.provisioningUrl = ''
         self.hasActiveDatasetToCommit = False
@@ -1612,16 +1628,16 @@ class OpenThreadTHCI(object):
         iPollingRate = int(iPollingRate * 1000)
         print(iPollingRate)
 
-        if self.sedPollPeriod != iPollingRate:
+        if self.__sedPollPeriod != iPollingRate:
             if not iPollingRate:
                 iPollingRate = 0xFFFF  # T5.2.1, disable polling
             elif iPollingRate < 1:
                 iPollingRate = 1  # T9.2.13
-            self.sedPollPeriod = iPollingRate
+            self.__sedPollPeriod = iPollingRate
 
             # apply immediately
             if self.__isOpenThreadRunning():
-                return self.__setPollPeriod(self.sedPollPeriod)
+                return self.__setPollPeriod(self.__sedPollPeriod)
 
         return True
 
@@ -3558,6 +3574,16 @@ class OpenThreadTHCI(object):
     def setLeaderWeight(self, iWeight=72):
         self.__executeCommand('leaderweight %d' % iWeight)
 
+    def __detectZephyr(self):
+        """Detect if the device is running Zephyr and adapt in that case"""
+
+        try:
+            if self.__executeCommand('ot thread version')[0].isdigit():
+                self.__cmdPrefix = 'ot '
+                self.__lineSepX = re.compile(r'\r\n|\r|\n')
+        except CommandError:
+            pass
+
     def __discoverDeviceCapability(self):
         """Discover device capability according to version"""
         if self.IsBorderRouter:
@@ -3596,7 +3622,8 @@ class OpenThreadTHCI(object):
 
 class OTNCS(OpenThreadTHCI, IThci):
     # Used for reference firmware version control for Test Harness.
-    # This variable will be updated to match the OpenThread reference firmware officially released.
+    # This variable will be updated to match the OpenThread reference firmware
+    # officially released.
 
     def _connect(self):
         print('My port is %s' % self)
@@ -3663,15 +3690,17 @@ class OTNCS(OpenThreadTHCI, IThci):
             logging.exception('%s: No new data', self)
             self.sleep(0.1)
 
-        self.__lines += LINESEPX.split(tail)
+        self.__lines += self.__lineSepX.split(tail)
         if len(self.__lines) > 1:
             return self.__lines.pop(0)
 
     def _cliWriteLine(self, line):
-        # NCS adaptation
-        if not line.startswith('ot '):
-            line = 'ot %s' % line
-        self.__socWrite(line + '\r')
+        if self.__cmdPrefix:
+            if not line.startswith(self.__cmdPrefix):
+                line = self.__cmdPrefix + line
+            self.__socWrite(line + '\r')
+        else:
+            self.__socWrite(line + '\r\n')
 
     def _onCommissionStart(self):
         pass
