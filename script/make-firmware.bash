@@ -198,9 +198,7 @@ build_ot()
             done
 
             # Clean up
-            rm -rf openthread
             git clean -xfd
-            git submodule update --force
             ;;
 
         # Build OpenThread 1.1
