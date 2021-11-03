@@ -45,7 +45,8 @@ ncs_adapt()
   cp ${src_path} ${out_path}
   sed -i 's/Device : OpenThread/Device : OTNCS/g' ${out_path}
   sed -i 's/Class : OpenThread/Class : OTNCS/g' ${out_path}
-  sed -i 's/class OpenThread/class OTNCS/g' ${out_path}
+  sed -i 's/class OpenThread(/class OTNCS(/g' ${out_path}
+  sed -i 's/class OpenThread_/class OTNCS_/g' ${out_path}
   sed -i 's/THCI.OpenThread/THCI.OTNCS/g' ${out_path}
 }
 
