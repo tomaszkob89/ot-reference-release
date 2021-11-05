@@ -48,6 +48,7 @@ ncs_adapt()
   sed -i 's/class OpenThread(/class OTNCS(/g' ${out_path}
   sed -i 's/class OpenThread_/class OTNCS_/g' ${out_path}
   sed -i 's/THCI.OpenThread/THCI.OTNCS/g' ${out_path}
+  sed -i 's/super(OpenThread/super(OTNCS/g' ${out_path}
 }
 
 src_dir=openthread/tools/harness-thci
