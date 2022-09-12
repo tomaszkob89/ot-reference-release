@@ -89,7 +89,7 @@ elif [ "${REFERENCE_RELEASE_TYPE?}" = "1.3" ]; then
                 'DHCPV6_PD=0'
                 'WEB_GUI=0'
                 'REST_API=0'
-                "OTBR_OPTIONS=\"-DOT_THREAD_VERSION=1.3 -DOT_FULL_LOGS=ON -DOT_BORDER_ROUTING=ON -DOTBR_DUA_ROUTING=ON -DOT_DUA=ON -DOT_MLR=ON -DOTBR_DNSSD_DISCOVERY_PROXY=ON -DOTBR_SRP_ADVERTISING_PROXY=ON -DOT_SRP_CLIENT=ON -DOT_TREL=ON -DOT_RCP_RESTORATION_MAX_COUNT=100 -DOTBR_PACKAGE_VERSION=${OT_BR_POSIX_COMMIT_HASH} -DOT_PACKAGE_VERSION=${OPENTHREAD_COMMIT_HASH}\""
+                "OTBR_OPTIONS=\"-DOT_LINK_METRICS_INITIATOR=OFF -DOT_LINK_METRICS_SUBJECT=OFF -DOT_THREAD_VERSION=1.3 -DOT_FULL_LOGS=ON -DOT_BORDER_ROUTING=ON -DOTBR_DUA_ROUTING=ON -DOT_DUA=ON -DOT_MLR=ON -DOTBR_DNSSD_DISCOVERY_PROXY=ON -DOTBR_SRP_ADVERTISING_PROXY=ON -DOT_SRP_CLIENT=ON -DOT_TREL=ON -DOT_RCP_RESTORATION_MAX_COUNT=100 -DOTBR_PACKAGE_VERSION=${OT_BR_POSIX_COMMIT_HASH} -DOT_PACKAGE_VERSION=${OPENTHREAD_COMMIT_HASH}\""
             )
             ;;
         *)
@@ -105,6 +105,7 @@ elif [ "${REFERENCE_RELEASE_TYPE?}" = "1.3" ]; then
                 'DHCPV6_PD=0'
                 'WEB_GUI=0'
                 'REST_API=0'
+                
                 "OTBR_OPTIONS=\"-DOT_THREAD_VERSION=1.3 -DOT_FULL_LOGS=ON -DOT_BORDER_ROUTING=ON -DOTBR_DUA_ROUTING=ON -DOT_DUA=ON -DOT_MLR=ON -DOTBR_DNSSD_DISCOVERY_PROXY=ON -DOTBR_SRP_ADVERTISING_PROXY=ON -DOT_SRP_CLIENT=ON -DOT_TREL=ON -DOTBR_PACKAGE_VERSION=${OT_BR_POSIX_COMMIT_HASH} -DOT_PACKAGE_VERSION=${OPENTHREAD_COMMIT_HASH}\""
             )
             ;;
@@ -140,28 +141,14 @@ cmake --version
 
 pip3 install zeroconf
 
-su -c "${BUILD_OPTIONS[*]} script/setup" pi || true
+su -c "${BUILD_OPTIONS[*]} script/setup" pi
 
-if [ "$REFERENCE_RELEASE_TYPE" = "1.2" ]; then
-    cd /home/pi/repo/
-    ./script/make-commissioner.bash
-fi
+# if [ "$REFERENCE_RELEASE_TYPE" = "1.2" ]; then
+#     cd /home/pi/repo/
+#     ./script/make-commissioner.bash
+# fi
 
-# nRF Connect SDK related actions
-if [ "${REFERENCE_PLATFORM?}" = "ncs" ]; then
-    wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
-    sudo python2 get-pip.py
-    apt-get install -y --no-install-recommends vim wiringpi
-    pip install wrapt==1.12.1
-    pip install nrfutil
 
-    # add calling of link_dongle.py script at startup to update symlink to the dongle
-    sed -i '/exit 0/d' /etc/rc.local
-    grep -qxF 'sudo systemctl restart otbr-agent.service' /etc/rc.local || echo 'sudo systemctl restart otbr-agent.service' >>/etc/rc.local
-    echo 'exit 0' >>/etc/rc.local
-
-    # update testharness-discovery script to fix autodiscovery issue
-    sed -i 's/OpenThread_BR/OTNCS_BR/g' /usr/sbin/testharness-discovery
 
 elif [ "${REFERENCE_PLATFORM?}" = "efr32mg12" ]; then
     # update testharness-discovery script to fix autodiscovery issue
